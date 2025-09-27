@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCE A/L Commerce Study System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+    
+    <!-- Load Firebase FIRST -->
+    <script type="module">
+        // Import Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        
+        // Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDDrnvBELoasM340FtHlg9G98xF37QZU_E",
+            authDomain: "flashcard-srs.firebaseapp.com",
+            projectId: "flashcard-srs",
+            storageBucket: "flashcard-srs.firebasestorage.app",
+            messagingSenderId: "925780826603",
+            appId: "1:925780826603:web:91319640fdd381dbdb21ae"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.db = db;
+        window.firebaseFunctions = {
+            collection, addDoc, getDocs, updateDoc, doc, query, where, orderBy
+        };
+        
+        console.log("Firebase initialized successfully!");
+    </script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        econ: '#10b981',
+                        acc: '#f59e0b',
+                        ict: '#8b5cf6'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!--<div class="flex items-center">
+                    <h1 class="text-xl font-bold text-gray-900 dark:text-white">A/L Commerce Study</h1>
+                </div>-->
+                <div class="flex space-x-8">
+                    <button onclick="showPage('dashboard')" class="nav-btn text-primary border-primary" id="nav-dashboard">
+                        Dashboard
+                    </button>
+                    <button onclick="showPage('study')" class="nav-btn text-gray-500 hover:text-gray-700" id="nav-study">
+                        Study
+                    </button>
+                    <button onclick="showPage('import')" class="nav-btn text-gray-500 hover:text-gray-700" id="nav-import">
+                        Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Page -->
+    <div id="page-dashboard" class="page-content">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Header Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Cards Due Today</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="cards-due-count">0</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Accuracy %</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="accuracy-percent">0%</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Study Streak</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="study-streak">0 days</p>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <div class="flex items-center">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Focus Density</p>
+                            <p class="text-2xl font-bold text-gray-900 dark:text-white" id="focus-density">0%</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Start Section -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <button onclick="startStudySession('economics')" class="bg-gradient-to-r from-econ to-econ-dark text-white rounded-xl p-6 text-left hover:shadow-lg transition-all duration-300">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Economics</h3>
+                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <span class="text-sm font-bold" id="econ-due">0</span>
+                        </div>
+                    </div>
+                    <p class="text-sm opacity-90 mb-2"><span id="econ-due-text">0</span> cards due</p>
+                    <div class="flex items-center text-sm opacity-75">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        <span id="econ-accuracy">0%</span> accuracy
+                    </div>
+                </button>
+
+                <button onclick="startStudySession('accounting')" class="bg-gradient-to-r from-acc to-acc-dark text-white rounded-xl p-6 text-left hover:shadow-lg transition-all duration-300">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">Accounting</h3>
+                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <span class="text-sm font-bold" id="acc-due">0</span>
+                        </div>
+                    </div>
+                    <p class="text-sm opacity-90 mb-2"><span id="acc-due-text">0</span> cards due</p>
+                    <div class="flex items-center text-sm opacity-75">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        <span id="acc-accuracy">0%</span> accuracy
+                    </div>
+                </button>
+
+                <button onclick="startStudySession('ict')" class="bg-gradient-to-r from-ict to-ict-dark text-white rounded-xl p-6 text-left hover:shadow-lg transition-all duration-300">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold">ICT</h3>
+                        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+                            <span class="text-sm font-bold" id="ict-due">0</span>
+                        </div>
+                    </div>
+                    <p class="text-sm opacity-90 mb-2"><span id="ict-due-text">0</span> cards due</p>
+                    <div class="flex items-center text-sm opacity-75">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                        <span id="ict-accuracy">0%</span> accuracy
+                    </div>
+                </button>
+            </div>
+
+            <!-- Start Study Button -->
+            <div class="text-center mb-8">
+                <button onclick="startStudySession()" id="start-study-btn" class="bg-primary hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200 transform hover:scale-105 shadow-lg">
+                    Start Study Session
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Study Session Page -->
+    <div id="page-study" class="page-content hidden">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Session Progress -->
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-gray-600 dark:text-gray-400">Progress</span>
+                    <span class="text-sm text-gray-600 dark:text-gray-400" id="session-progress">0 / 0</span>
+                </div>
+                <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div class="bg-primary h-2 rounded-full transition-all duration-300" id="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Flashcard Container -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 min-h-96 flex flex-col justify-center" id="flashcard-container">
+                <div id="no-cards-message" class="text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No cards due</h3>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">All caught up! Check back later or import new cards.</p>
+                    <button onclick="showPage('import')" class="mt-4 bg-primary hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                        Import Cards
+                    </button>
+                </div>
+
+                <!-- Question Display -->
+                <div id="question-display" class="hidden">
+                    <div class="text-center mb-8">
+                        <div class="inline-block px-3 py-1 rounded-full text-xs font-medium mb-4" id="subject-badge"></div>
+                        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4" id="current-question"></h2>
+                        <div id="mcq-options" class="space-y-3 mb-6"></div>
+                    </div>
+                    
+                    <!-- Answer Display -->
+                    <div id="answer-display" class="hidden">
+                        <div class="border-t dark:border-gray-700 pt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Answer:</h3>
+                            <p class="text-gray-700 dark:text-gray-300 mb-6" id="current-answer"></p>
+                            
+                            <!-- SM-2 Difficulty Buttons -->
+                            <div class="flex justify-center space-x-2 flex-wrap">
+                                <button onclick="submitAnswer(0)" class="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-3 rounded-lg transition duration-200 text-xs">
+                                    0 - Forget
+                                </button>
+                                <button onclick="submitAnswer(1)" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-3 rounded-lg transition duration-200 text-xs">
+                                    1 - Hard
+                                </button>
+                                <button onclick="submitAnswer(2)" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-3 rounded-lg transition duration-200 text-xs">
+                                    2 - Medium
+                                </button>
+                                <button onclick="submitAnswer(3)" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-3 rounded-lg transition duration-200 text-xs">
+                                    3 - Good
+                                </button>
+                                <button onclick="submitAnswer(4)" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-3 rounded-lg transition duration-200 text-xs">
+                                    4 - Easy
+                                </button>
+                                <button onclick="submitAnswer(5)" class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-3 rounded-lg transition duration-200 text-xs">
+                                    5 - Perfect
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reveal Answer Button -->
+                    <div id="reveal-btn-container" class="text-center">
+                        <button onclick="revealAnswer()" class="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition duration-200">
+                            Reveal Answer
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session Complete -->
+            <div id="session-complete" class="hidden text-center bg-green-50 dark:bg-green-900 rounded-lg p-8">
+                <svg class="mx-auto h-12 w-12 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <h3 class="mt-2 text-lg font-medium text-green-800 dark:text-green-400">Session Complete!</h3>
+                <p class="mt-1 text-sm text-green-600 dark:text-green-300" id="session-stats"></p>
+                <button onclick="showPage('dashboard')" class="mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                    Return to Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Page -->
+    <div id="page-import" class="page-content hidden">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Import Flashcards</h2>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Subject
+                    </label>
+                    <select id="subject-select" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white">
+                        <option value="economics">Economics</option>
+                        <option value="accounting">Accounting</option>
+                        <option value="ict">ICT</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Paste your flashcards here
+                    </label>
+                    <textarea
+                        id="import-textarea"
+                        rows="12"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white"
+                        placeholder="Examples:
+
+Q: What is the law of demand?
+A: As price increases, quantity demanded decreases
+
+Q: Which market structure has many sellers?
+- Monopoly
+- Oligopoly
+- Perfect Competition (correct)
+- Monopolistic Competition
+
+Or as TSV:
+What is GDP?	Gross Domestic Product"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="auto-mcq" checked class="rounded border-gray-300 text-primary focus:ring-primary">
+                        <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Auto-detect MCQ</span>
+                    </label>
+                    
+                    <div class="space-x-4">
+                        <button onclick="previewCards()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                            Preview
+                        </button>
+                        <button onclick="importCards()" class="bg-primary hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                            Import Cards
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preview Area -->
+                <div id="preview-area" class="hidden mt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Preview</h3>
+                    <div id="preview-stats" class="text-sm text-gray-600 dark:text-gray-400 mb-4"></div>
+                    <div id="preview-cards" class="space-y-4 max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- Import Status -->
+                <div id="import-status" class="hidden mt-4 p-4 rounded-md"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentStudySession = [];
+        let currentCardIndex = 0;
+        let sessionStats = { correct: 0, total: 0 };
+
+        // Wait for Firebase to load
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                const check = () => {
+                    if (window.db && window.firebaseFunctions) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+
+        // Navigation
+        function showPage(pageName) {
+            document.querySelectorAll('.page-content').forEach(page => page.classList.add('hidden'));
+            document.getElementById(`page-${pageName}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent';
+            });
+            document.getElementById(`nav-${pageName}`).className = 'nav-btn text-primary border-primary dark:text-blue-400 dark:border-blue-400 px-3 py-2 rounded-md text-sm font-medium border-b-2';
+
+            if (pageName === 'dashboard') {
+                loadDashboard();
+            } else if (pageName === 'study') {
+                resetStudySession();
+            }
+        }
+
+        // Firestore functions
+        async function getDueCards() {
+            try {
+                await waitForFirebase();
+                const { collection, getDocs, query, where } = window.firebaseFunctions;
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                const cardsQuery = query(
+                    collection(db, 'flashcards'),
+                    where('dueDate', '<=', today)
+                );
+
+                const querySnapshot = await getDocs(cardsQuery);
+                const cards = [];
+
+                querySnapshot.forEach((doc) => {
+                    const card = doc.data();
+                    card.id = doc.id;
+                    cards.push(card);
+                });
+
+                return cards;
+            } catch (error) {
+                console.error('Error getting due cards:', error);
+                showError('Failed to load cards. Using demo data instead.');
+                
+                // Return demo data if Firebase fails
+                return getDemoCards();
+            }
+        }
+
+        function getDemoCards() {
+            return [
+                {
+                    id: 'demo-1',
+                    question: 'What is the law of demand?',
+                    answer: 'As price increases, quantity demanded decreases',
+                    subject: 'economics',
+                    type: 'basic',
+                    dueDate: new Date()
+                },
+                {
+                    id: 'demo-2',
+                    question: 'What is the accounting equation?',
+                    answer: 'Assets = Liabilities + Equity',
+                    subject: 'accounting', 
+                    type: 'basic',
+                    dueDate: new Date()
+                },
+                {
+                    id: 'demo-3',
+                    question: 'What does CPU stand for?',
+                    answer: 'Central Processing Unit',
+                    subject: 'ict',
+                    type: 'basic',
+                    dueDate: new Date()
+                }
+            ];
+        }
+
+        async function saveCard(card) {
+            try {
+                await waitForFirebase();
+                const { collection, addDoc } = window.firebaseFunctions;
+                
+                const cardData = {
+                    question: card.question,
+                    answer: card.answer,
+                    type: card.type,
+                    subject: card.subject,
+                    options: card.options || [],
+                    correctIndex: card.correctIndex || 0,
+                    easeFactor: card.easeFactor || 2.5,
+                    interval: card.interval || 0,
+                    reviews: card.reviews || 0,
+                    dueDate: card.dueDate || new Date(),
+                    createdAt: new Date(),
+                    lastReviewed: null
+                };
+
+                await addDoc(collection(db, 'flashcards'), cardData);
+                return true;
+            } catch (error) {
+                console.error('Error saving card:', error);
+                showError('Failed to save card to database.');
+                return false;
+            }
+        }
+
+        async function updateCard(cardId, updates) {
+            try {
+                await waitForFirebase();
+                const { doc, updateDoc } = window.firebaseFunctions;
+                
+                const cardRef = doc(db, 'flashcards', cardId);
+                await updateDoc(cardRef, updates);
+                return true;
+            } catch (error) {
+                console.error('Error updating card:', error);
+                return false;
+            }
+        }
+
+        // SM-2 Algorithm
+        function updateCardSM2(card, grade) {
+            card.easeFactor = card.easeFactor || 2.5;
+            card.interval = card.interval || 0;
+            card.reviews = card.reviews || 0;
+            
+            if (grade >= 3) {
+                if (card.reviews === 0) {
+                    card.interval = 1;
+                } else if (card.reviews === 1) {
+                    card.interval = 6;
+                } else {
+                    card.interval = Math.round(card.interval * card.easeFactor);
+                }
+                
+                card.easeFactor = card.easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+                card.easeFactor = Math.max(1.3, card.easeFactor);
+            } else {
+                card.interval = 1;
+            }
+            
+            card.reviews = card.reviews + 1;
+            card.lastReviewed = new Date();
+            
+            const nextReview = new Date();
+            nextReview.setDate(nextReview.getDate() + card.interval);
+            card.nextReview = nextReview;
+            
+            return card;
+        }
+
+        async function submitAnswer(grade) {
+            const card = currentStudySession[currentCardIndex];
+            
+            try {
+                const updatedCard = updateCardSM2(card, grade);
+                
+                await updateCard(card.id, {
+                    easeFactor: updatedCard.easeFactor,
+                    interval: updatedCard.interval,
+                    reviews: updatedCard.reviews,
+                    dueDate: updatedCard.nextReview,
+                    lastReviewed: new Date()
+                });
+                
+                sessionStats.total++;
+                if (grade >= 3) {
+                    sessionStats.correct++;
+                }
+                
+                currentCardIndex++;
+                showCurrentCard();
+            } catch (error) {
+                console.error('Error submitting answer:', error);
+                // Continue anyway with demo mode
+                sessionStats.total++;
+                if (grade >= 3) sessionStats.correct++;
+                currentCardIndex++;
+                showCurrentCard();
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboard() {
+            try {
+                const dueCards = await getDueCards();
+                document.getElementById('cards-due-count').textContent = dueCards.length;
+
+                // Update subject counts
+                const econCards = dueCards.filter(c => c.subject === 'economics');
+                const accCards = dueCards.filter(c => c.subject === 'accounting');
+                const ictCards = dueCards.filter(c => c.subject === 'ict');
+
+                document.getElementById('econ-due').textContent = econCards.length;
+                document.getElementById('econ-due-text').textContent = econCards.length;
+                document.getElementById('acc-due').textContent = accCards.length;
+                document.getElementById('acc-due-text').textContent = accCards.length;
+                document.getElementById('ict-due').textContent = ictCards.length;
+                document.getElementById('ict-due-text').textContent = ictCards.length;
+
+                // Update start study button
+                const startBtn = document.getElementById('start-study-btn');
+                if (dueCards.length === 0) {
+                    startBtn.textContent = 'No Cards Due';
+                    startBtn.disabled = true;
+                    startBtn.className = 'bg-gray-400 text-white font-bold py-3 px-8 rounded-lg text-lg cursor-not-allowed';
+                } else {
+                    startBtn.textContent = `Start Study Session (${dueCards.length} cards)`;
+                    startBtn.disabled = false;
+                    startBtn.className = 'bg-primary hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-200 transform hover:scale-105 shadow-lg';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showError('Failed to load dashboard data');
+            }
+        }
+
+        // Study session functions
+        async function startStudySession(subject) {
+            showPage('study');
+            try {
+                currentStudySession = await getDueCards();
+                
+                if (subject) {
+                    currentStudySession = currentStudySession.filter(card => card.subject === subject);
+                }
+                
+                if (currentStudySession.length === 0) {
+                    showNoCards();
+                    return;
+                }
+                
+                currentCardIndex = 0;
+                sessionStats = { correct: 0, total: 0 };
+                showCurrentCard();
+            } catch (error) {
+                console.error('Error starting study session:', error);
+                showError('Failed to load study cards');
+            }
+        }
+
+        function showCurrentCard() {
+            if (currentCardIndex >= currentStudySession.length) {
+                showSessionComplete();
+                return;
+            }
+
+            const card = currentStudySession[currentCardIndex];
+
+            document.getElementById('current-question').textContent = card.question;
+            document.getElementById('current-answer').textContent = card.answer;
+
+            // Update progress
+            document.getElementById('session-progress').textContent = `${currentCardIndex + 1} / ${currentStudySession.length}`;
+            const progressPercent = ((currentCardIndex + 1) / currentStudySession.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+
+            // Update subject badge
+            const subjectBadge = document.getElementById('subject-badge');
+            subjectBadge.textContent = card.subject.charAt(0).toUpperCase() + card.subject.slice(1);
+            subjectBadge.className = `inline-block px-3 py-1 rounded-full text-xs font-medium mb-4 bg-${card.subject} text-white`;
+
+            // Handle MCQ options
+            const mcqContainer = document.getElementById('mcq-options');
+            mcqContainer.innerHTML = '';
+
+            if (card.type === 'mcq' && card.options) {
+                card.options.forEach((option, index) => {
+                    const button = document.createElement('button');
+                    button.className = 'block w-full text-left p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition duration-200';
+                    button.textContent = `${String.fromCharCode(65 + index)}. ${option}`;
+                    button.onclick = () => selectMCQOption(index);
+                    mcqContainer.appendChild(button);
+                });
+            }
+
+            document.getElementById('question-display').classList.remove('hidden');
+            document.getElementById('reveal-btn-container').classList.remove('hidden');
+            document.getElementById('answer-display').classList.add('hidden');
+            document.getElementById('no-cards-message').classList.add('hidden');
+        }
+
+        function revealAnswer() {
+            document.getElementById('reveal-btn-container').classList.add('hidden');
+            document.getElementById('answer-display').classList.remove('hidden');
+        }
+
+        function selectMCQOption(selectedIndex) {
+            const card = currentStudySession[currentCardIndex];
+            const isCorrect = selectedIndex === card.correctIndex;
+            const grade = isCorrect ? 4 : 2;
+            
+            submitAnswer(grade);
+        }
+
+        function showSessionComplete() {
+            const accuracy = sessionStats.total > 0 ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0;
+            document.getElementById('session-stats').textContent =
+                `Completed ${sessionStats.total} cards with ${accuracy}% accuracy`;
+
+            document.getElementById('question-display').classList.add('hidden');
+            document.getElementById('session-complete').classList.remove('hidden');
+        }
+
+        function resetStudySession() {
+            currentStudySession = [];
+            currentCardIndex = 0;
+            sessionStats = { correct: 0, total: 0 };
+            document.getElementById('no-cards-message').classList.remove('hidden');
+            document.getElementById('question-display').classList.add('hidden');
+            document.getElementById('session-complete').classList.add('hidden');
+        }
+
+        function showNoCards() {
+            document.getElementById('no-cards-message').classList.remove('hidden');
+            document.getElementById('question-display').classList.add('hidden');
+        }
+
+        // Import functions
+        function previewCards() {
+            const text = document.getElementById('import-textarea').value;
+            const subject = document.getElementById('subject-select').value;
+            const autoMCQ = document.getElementById('auto-mcq').checked;
+
+            try {
+                const cards = parseInput(text, subject, autoMCQ);
+                displayPreview(cards);
+            } catch (error) {
+                showError('Failed to parse cards. Check the format.');
+            }
+        }
+
+        function parseInput(text, subject, autoMCQ) {
+            const lines = text.split('\n').filter(line => line.trim());
+            const cards = [];
+            let currentCard = null;
+
+            for (const line of lines) {
+                if (line.includes('\t')) {
+                    const [question, answer] = line.split('\t').map(part => part.trim());
+                    if (question && answer) {
+                        cards.push({
+                            question,
+                            answer,
+                            type: 'basic',
+                            subject
+                        });
+                    }
+                    continue;
+                }
+
+                if (line.toLowerCase().startsWith('q:')) {
+                    if (currentCard) cards.push(currentCard);
+                    currentCard = {
+                        question: line.substring(2).trim(),
+                        type: 'basic',
+                        subject
+                    };
+                } else if (line.toLowerCase().startsWith('a:')) {
+                    if (currentCard) {
+                        currentCard.answer = line.substring(2).trim();
+                    }
+                } else if ((line.startsWith('-') || line.startsWith('*')) && autoMCQ) {
+                    if (currentCard) {
+                        if (!currentCard.options) {
+                            currentCard.options = [];
+                            currentCard.type = 'mcq';
+                        }
+
+                        const optionText = line.substring(1).trim();
+                        const isCorrect = line.includes('(correct)') || line.includes('(right)');
+
+                        currentCard.options.push(optionText.replace('(correct)', '').replace('(right)', '').trim());
+
+                        if (isCorrect) {
+                            currentCard.correctIndex = currentCard.options.length - 1;
+                        }
+                    }
+                } else if (currentCard && !currentCard.answer) {
+                    currentCard.answer = line.trim();
+                } else if (!currentCard && line.trim()) {
+                    if (currentCard) cards.push(currentCard);
+                    currentCard = {
+                        question: line.trim(),
+                        type: 'basic',
+                        subject
+                    };
+                }
+            }
+
+            if (currentCard) cards.push(currentCard);
+
+            cards.forEach(card => {
+                if (card.type === 'mcq' && card.options && card.correctIndex === undefined) {
+                    card.correctIndex = 0;
+                }
+            });
+
+            return cards;
+        }
+
+        function displayPreview(cards) {
+            const previewArea = document.getElementById('preview-area');
+            const previewStats = document.getElementById('preview-stats');
+            const previewCards = document.getElementById('preview-cards');
+
+            previewStats.textContent = `Found ${cards.length} card(s)`;
+            previewCards.innerHTML = '';
+
+            cards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'bg-gray-50 dark:bg-gray-700 p-4 rounded-lg';
+
+                let content = `
+                    <div class="font-semibold text-gray-900 dark:text-white">Q: ${card.question}</div>
+                    <div class="mt-2 text-gray-700 dark:text-gray-300">A: ${card.answer}</div>
+                `;
+
+                if (card.type === 'mcq' && card.options) {
+                    content += `<div class="mt-2 text-sm text-gray-600 dark:text-gray-400">Options: ${card.options.join(', ')}</div>`;
+                    content += `<div class="mt-1 text-sm text-green-600 dark:text-green-400">Correct: ${card.options[card.correctIndex]}</div>`;
+                }
+
+                cardElement.innerHTML = content;
+                previewCards.appendChild(cardElement);
+            });
+
+            previewArea.classList.remove('hidden');
+        }
+
+        async function importCards() {
+            const text = document.getElementById('import-textarea').value;
+            const subject = document.getElementById('subject-select').value;
+            const autoMCQ = document.getElementById('auto-mcq').checked;
+            const statusElement = document.getElementById('import-status');
+
+            try {
+                const cards = parseInput(text, subject, autoMCQ);
+                let successCount = 0;
+
+                for (const card of cards) {
+                    if (await saveCard(card)) {
+                        successCount++;
+                    }
+                }
+
+                statusElement.className = 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 p-4 rounded-md';
+                statusElement.innerHTML = `
+                    <strong>Success!</strong> Imported ${successCount} out of ${cards.length} cards.
+                `;
+                statusElement.classList.remove('hidden');
+
+                document.getElementById('import-textarea').value = '';
+                document.getElementById('preview-area').classList.add('hidden');
+
+                loadDashboard();
+            } catch (error) {
+                console.error('Error importing cards:', error);
+                statusElement.className = 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-md';
+                statusElement.innerHTML = `
+                    <strong>Error!</strong> Failed to import cards. Please check the format.
+                `;
+                statusElement.classList.remove('hidden');
+            }
+        }
+
+        // Utility functions
+        function showError(message) {
+            alert(`Error: ${message}`);
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            showPage('dashboard');
+            loadDashboard();
+        });
+    </script>
+
+    <style>
+        .nav-btn {
+            @apply px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent transition duration-200;
+        }
+    </style>
+</body>
+</html>
